@@ -1,7 +1,5 @@
 stages:
   - build_n_push_images
-  - deploy_dev
-  - deploy_prod
 
 variables:
   DOCKER_DRIVER: overlay2
