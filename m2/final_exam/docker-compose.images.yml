@@ -1,42 +1,6 @@
-# for running in docker compose with prebuilt images
-
-# version is now using "compose spec"
-# v2 and v3 are now combined!
-# docker-compose v1.27+ required
+version: "3"
 
 services:
-  vote:
-    image: dockersamples/examplevotingapp_vote
-    depends_on:
-      redis:
-        condition: service_healthy 
-    ports:
-      - "5000:80"
-    networks:
-      - front-tier
-      - back-tier
-
-  result:
-    image: dockersamples/examplevotingapp_result
-    depends_on:
-      db:
-        condition: service_healthy 
-    ports:
-      - "5001:80"
-    networks:
-      - front-tier
-      - back-tier
-
-  worker:
-    image: dockersamples/examplevotingapp_worker
-    depends_on:
-      redis:
-        condition: service_healthy 
-      db:
-        condition: service_healthy 
-    networks:
-      - back-tier
-
   redis:
     image: redis:alpine
     volumes:
@@ -46,7 +10,19 @@ services:
       interval: "5s"
     networks:
       - back-tier
-
+  result:
+    build:
+      context: ./result
+    image: netszky/result:latest
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy 
+    ports:
+      - "5001:80"
+    networks:
+      - front-tier
+      - back-tier
   db:
     image: postgres:15-alpine
     environment:
@@ -61,9 +37,41 @@ services:
     networks:
       - back-tier
 
+  seed-data:
+    build:
+      context: ./seed-data
+    image: netszky/seed-data:latest
+    container_name: seed-data
+    restart: always
+
+  worker:
+    build:
+      context: ./worker
+    image: netszky/worker:latest
+    restart: always
+    depends_on:
+      redis:
+        condition: service_healthy 
+      db:
+        condition: service_healthy 
+    networks:
+      - back-tier
+
+  vote:
+    build:
+      context: ./vote
+    image: netszky/vote:latest
+    restart: always
+    depends_on:
+      redis:
+        condition: service_healthy 
+    ports:
+      - "5000:80"
+    networks:
+      - front-tier
+      - back-tier
 volumes:
   db-data:
-
 networks:
   front-tier:
   back-tier:

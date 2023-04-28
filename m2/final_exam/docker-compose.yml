@@ -1,6 +1,6 @@
 services:
   vote:
-    build: ./vote
+    image: netszky/vote
     # use python rather than gunicorn for local dev
     command: python app.py
     depends_on:
@@ -21,7 +21,7 @@ services:
       - back-tier
 
   result:
-    build: ./result
+    image: netszky/result
     # use nodemon rather than node for local dev
     entrypoint: nodemon server.js
     depends_on:
@@ -37,8 +37,7 @@ services:
       - back-tier
 
   worker:
-    build:
-      context: ./worker
+    image: netszky/worker
     depends_on:
       redis:
         condition: service_healthy
@@ -63,7 +62,7 @@ services:
       POSTGRES_USER: "postgres"
       POSTGRES_PASSWORD: "postgres"
     volumes:
-      - "db-data:/var/lib/postgresql/data"
+      - "C:/db-data:/var/lib/postgresql/data"
       - "./healthchecks:/healthchecks"
     healthcheck:
       test: /healthchecks/postgres.sh
@@ -75,7 +74,7 @@ services:
   # it won't run unless you specify the "seed" profile
   # docker compose --profile seed up -d
   seed:
-    build: ./seed-data
+    image: netszky/seed-data
     profiles: ["seed"]
     depends_on:
       vote:
@@ -84,8 +83,8 @@ services:
       - front-tier
     restart: "no"
 
-volumes:
-  db-data:
+# volumes:
+#   db-data:
 
 networks:
   front-tier:
