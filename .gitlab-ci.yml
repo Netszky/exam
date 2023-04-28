@@ -1,5 +1,7 @@
 stages:
   - build_n_push_images
+  - deploy_dev
+  - deploy_prod
 
 variables:
   DOCKER_DRIVER: overlay2
@@ -12,13 +14,40 @@ services:
 before_script:
   - docker login -u $CI_REGISTRY -p $CI_REGISTRY_PASSWORD
 
-build_n_push:
-  rules:
-    - if: '$ENVIRONMENT != "dev" && $ENVIRONMENT != "prod"'
-  stage: build_n_push_images
+.build_n_push_template:
   image: docker/compose:1.29.2
   tags:
     - docker
   script:
     - docker-compose -f docker-compose.images.yml build
     - docker-compose -f docker-compose.images.yml push
+
+build_n_push:
+  extends: .build_n_push_template
+  rules:
+    - if: '$ENVIRONMENT != "dev" && $ENVIRONMENT != "prod"'
+  stage: build_n_push_images
+  image: docker/compose:1.29.2
+  tags:
+    - docker
+  artifacts:
+    paths: 
+      - "./"
+
+deploy_dev:
+  extends: .build_n_push_template
+  stage: deploy_dev
+  only:
+    - dev
+  script:
+    - export IMAGE_TAG=dev
+    - *script
+
+deploy_prod:
+  stage: deploy_prod
+  only:
+    - main
+  script:
+    - export IMAGE_TAG=prod
+    - *script
+
