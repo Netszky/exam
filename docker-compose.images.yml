@@ -13,7 +13,7 @@ services:
   result:
     build:
       context: ./result
-    image: netszky/result:latest
+    image: netszky/result:${IMAGE_TAG}
     restart: always
     depends_on:
       db:
@@ -40,14 +40,14 @@ services:
   seed-data:
     build:
       context: ./seed-data
-    image: netszky/seed-data:latest
+    image: netszky/seed-data:${IMAGE_TAG}
     container_name: seed-data
     restart: always
 
   worker:
     build:
       context: ./worker
-    image: netszky/worker:latest
+    image: netszky/worker:${IMAGE_TAG}
     restart: always
     depends_on:
       redis:
@@ -60,7 +60,7 @@ services:
   vote:
     build:
       context: ./vote
-    image: netszky/vote:latest
+    image: netszky/vote:${IMAGE_TAG}
     restart: always
     depends_on:
       redis:
