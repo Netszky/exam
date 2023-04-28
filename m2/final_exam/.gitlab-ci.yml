@@ -1,0 +1,26 @@
+stages:
+  - build_n_push_images
+  - deploy_dev
+  - deploy_prod
+
+variables:
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: ""
+  DOCKER_HOST: "tcp://172.17.0.1:2375"
+
+services:
+  - docker:dind
+
+before_script:
+  - docker login -u $CI_REGISTRY -p $CI_REGISTRY_PASSWORD
+
+build_n_push:
+  rules:
+    - if: '$ENVIRONMENT != "dev" && $ENVIRONMENT != "prod"'
+  stage: build_n_push_images
+  image: docker:stable
+  tags:
+    - docker
+  script:
+    - docker-compose -f docker-compose.images.yml build
+    - docker-compose -f docker-compose.images.yml push
