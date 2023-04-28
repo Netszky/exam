@@ -1,14 +1,12 @@
 stages:
   - build_n_push_images
-  # - deploy_dev
-  # - deploy_prod
+  - deploy_dev
+  - deploy_prod
 
 variables:
   DOCKER_DRIVER: overlay2
   DOCKER_TLS_CERTDIR: ""
   DOCKER_HOST: "tcp://172.17.0.1:2375"
-
-
 services:
   - docker:dind
 
@@ -17,12 +15,12 @@ before_script:
 
 build_n_push:
   rules:
-  - if: '$CI_COMMIT_BRANCH == "dev"'
-    variables:
-      IMAGE_TAG: "dev"
-  - if: '$CI_COMMIT_BRANCH == "main"'
-    variables:
-      IMAGE_TAG: "prod"
+    - if: '$CI_COMMIT_BRANCH == "dev"'
+      variables:
+        IMAGE_TAG: "dev"
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      variables:
+        IMAGE_TAG: "prod"
   stage: build_n_push_images
   image: docker/compose:1.29.2
   tags:
@@ -32,19 +30,39 @@ build_n_push:
     - docker-compose -f docker-compose.images.yml build
     - docker-compose -f docker-compose.images.yml push
   artifacts:
-    paths: 
+    paths:
       - "./"
+deploy_dev:
+  image: debian:latest
+  tags:
+    - docker
+  before_script:
+    - apt-get update && apt-get install -y gettext openssh-client
+    - export IMAGE_TAG=dev
+    - envsubst < ./docker-compose.yml > ./docker-compose.dev.yml
+    - chmod 400 $SSH_PRIVATE
+    # - docker cp ./docker-compose.yaml ubuntu@44.211.37.181:/home/ubuntu
+    - scp -o StrictHostKeyChecking=no -i $SSH_PRIVATE ./docker-compose.dev.yml ubuntu@44.211.37.181:/home/ubuntu
+  script:
+    - ssh -o StrictHostKeyChecking=no -i $SSH_PRIVATE ubuntu@44.211.37.181
+      'ls && docker-compose -f docker-compose.dev.yml down && docker-compose -f docker-compose.dev.yml up -d && docker images && docker ps'
+  stage: deploy_dev
+  only:
+    - dev
 
-# deploy_dev:
-#   stage: deploy_dev
-#   only:
-#     - dev
-#   script:
-#     - export IMAGE_TAG=dev
-# deploy_prod:
-#   stage: deploy_prod
-#   only:
-#     - main
-#   script:
-#     - export IMAGE_TAG=prod
-
+deploy_prod:
+  stage: deploy_prod
+  image: debian:latest
+  tags:
+    - docker
+  only:
+    - main
+  before_script:
+    - apt-get update && apt-get install -y gettext openssh-client
+    - export IMAGE_TAG=prod
+    - envsubst < ./docker-compose.yml > ./docker-compose.prod.yml
+    - chmod 400 $SSH_PRIVATE
+    - scp -o StrictHostKeyChecking=no -i $SSH_PRIVATE ./docker-compose.prod.yml ubuntu@54.174.69.153:/home/ubuntu
+  script:
+    - ssh -o StrictHostKeyChecking=no -i $SSH_PRIVATE ubuntu@54.174.69.153
+      'ls && docker-compose -f docker-compose.prod.yml down && docker-compose -f docker-compose.prod.yml up -d && docker images && docker ps'
