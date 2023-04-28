@@ -22,5 +22,5 @@ build_n_push:
   tags:
     - docker
   script:
-    - docker-compose -f docker-compose.images.yml build
-    - docker-compose -f docker-compose.images.yml push
+    - docker compose -f docker-compose.images.yml build
+    - docker compose -f docker-compose.images.yml push
