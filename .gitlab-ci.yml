@@ -1,12 +1,13 @@
 stages:
   - build_n_push_images
-  - deploy_dev
-  - deploy_prod
+  # - deploy_dev
+  # - deploy_prod
 
 variables:
   DOCKER_DRIVER: overlay2
   DOCKER_TLS_CERTDIR: ""
   DOCKER_HOST: "tcp://172.17.0.1:2375"
+
 
 services:
   - docker:dind
@@ -14,40 +15,36 @@ services:
 before_script:
   - docker login -u $CI_REGISTRY -p $CI_REGISTRY_PASSWORD
 
-.build_n_push_template:
-  image: docker/compose:1.29.2
-  tags:
-    - docker
-  script:
-    - docker-compose -f docker-compose.images.yml build
-    - docker-compose -f docker-compose.images.yml push
-
 build_n_push:
-  extends: .build_n_push_template
   rules:
-    - if: '$ENVIRONMENT != "dev" && $ENVIRONMENT != "prod"'
+  - if: '$CI_COMMIT_BRANCH == "dev"'
+    variables:
+      IMAGE_TAG: "dev"
+  - if: '$CI_COMMIT_BRANCH == "main"'
+    variables:
+      IMAGE_TAG: "prod"
   stage: build_n_push_images
   image: docker/compose:1.29.2
   tags:
     - docker
+  script:
+    - export IMAGE_TAG=$IMAGE_TAG
+    - docker-compose -f docker-compose.images.yml build
+    - docker-compose -f docker-compose.images.yml push
   artifacts:
     paths: 
       - "./"
 
-deploy_dev:
-  extends: .build_n_push_template
-  stage: deploy_dev
-  only:
-    - dev
-  script:
-    - export IMAGE_TAG=dev
-    - *script
-
-deploy_prod:
-  stage: deploy_prod
-  only:
-    - main
-  script:
-    - export IMAGE_TAG=prod
-    - *script
+# deploy_dev:
+#   stage: deploy_dev
+#   only:
+#     - dev
+#   script:
+#     - export IMAGE_TAG=dev
+# deploy_prod:
+#   stage: deploy_prod
+#   only:
+#     - main
+#   script:
+#     - export IMAGE_TAG=prod
 
